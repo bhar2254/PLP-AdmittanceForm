@@ -14,7 +14,7 @@ public class SoberForm extends QWidget
 {
 	public static final String version = "a1.0.2";
 	public static final String windowTitle = "Blaine Harper's SoberShift (" + version +")";	
-	public static boolean firstRun = false;
+	public static boolean firstRun = true;
 	
     private QLineEdit formLineEdit, orgOutput;
     
@@ -40,7 +40,7 @@ public class SoberForm extends QWidget
     	setUpDirectory();
         
         if(firstRun)
-        	FirstRun.run();
+        	FirstRun.run(args);
         
         setupIndexArray();
         
@@ -256,8 +256,8 @@ public class SoberForm extends QWidget
         	
         	pw.close();
 
-//        	This will wrtie everything for the attendance box 
-//        	and work on refreshing the box everytime content
+//        	This will write everything for the attendance box 
+//        	and work on refreshing the box every time content
 //        	is submitted
         	
         	file = new File(attendanceFile);
@@ -288,7 +288,7 @@ public class SoberForm extends QWidget
     {
     	File theDir = new File(dir);
 
-    	// if the directory does not exist, create it
+//    	If the directory does not exist, create it
     	if (!theDir.exists()) {
     	    System.out.println("creating directory: " + theDir.getName());
     	    boolean result = false;
@@ -314,16 +314,16 @@ public class SoberForm extends QWidget
     	{
 			try {
 				file.createNewFile();
-				//Here true is to append the content to file
+//				Here true is to append the content to file
 	        	FileWriter fw = new FileWriter(file,true);
-	        	//BufferedWriter writer give better performance
+//	        	BufferedWriter writer give better performance
 	        	BufferedWriter bw = new BufferedWriter(fw);
 	        	PrintWriter pw = new PrintWriter(bw);
-	        	//This will add a new line to the file content
+//	        	This will add a new line to the file content
 	        	pw.println(defaultText);
-	        	/* Below three statements would add three 
-	        	 * mentioned Strings to the file in new lines.
-	        	 */
+//	        	Below three statements would add three 
+//	        	mentioned Strings to the file in new lines.
+
 				pw.close();
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -336,12 +336,15 @@ public class SoberForm extends QWidget
     	File file = new File(rootDir + "SoberShift");
     	if(!file.exists())
     		firstRun = true;
+    	
     	if(firstRun)
     		System.out.println("First RUN!");
+    	
     	makeNewDir(rootDir + "SoberShift");
     	makeNewDir(fileDir + "images");
     	makeNewDir(fileDir + "bin");
-    	makeNewFile(orgsFile,"N/A");
+    	makeNewFile(orgsFile,"N/A\n"
+    			+ "UnK");
     	makeNewFile(attendanceFile, "");
     }
     
@@ -351,7 +354,6 @@ public class SoberForm extends QWidget
 		FileReader fr = null;
 		
 		try {
-			//br = new BufferedReader(new FileReader(FILENAME));
 			fr = new FileReader(attendanceFile);
 			br = new BufferedReader(fr);
 			
