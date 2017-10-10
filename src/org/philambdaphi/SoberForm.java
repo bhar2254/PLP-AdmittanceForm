@@ -14,7 +14,7 @@ public class SoberForm extends QWidget
 {
 	public static final String version = "a1.0.2";
 	public static final String windowTitle = "Blaine Harper's SoberShift (" + version +")";	
-	public static boolean firstRun = true;
+	public static boolean firstRun = false, closeFirstRun = false;
 	
     private QLineEdit formLineEdit, orgOutput;
     
@@ -29,6 +29,8 @@ public class SoberForm extends QWidget
     private static String orgIndex[] = new String[64];
     private static int orgCount = 0;
     
+    public static SoberForm soberForm;
+    
 //    Some strings for filepaths to make this easier
     public static String namesFile = fileDir + "names.txt",
     					attendanceFile = fileDir + "\\bin\\attendance.ssf",
@@ -39,15 +41,20 @@ public class SoberForm extends QWidget
     {
     	setUpDirectory();
         
-        if(firstRun)
-        	FirstRun.run(args);
-        
         setupIndexArray();
         
         QApplication.initialize(args);
 
-        SoberForm soberForm = new SoberForm();
+        if(firstRun)
+        	FirstRun.run();
+        
+        soberForm = new SoberForm();
         soberForm.show();
+        soberForm.setFixedSize(480, 240);
+        
+        if(firstRun)
+        	FirstRun.firstRunWindow.raise();
+        
         populateAttendance();
 
         QApplication.instance().exec();
@@ -63,6 +70,7 @@ public class SoberForm extends QWidget
         QGroupBox orgGroup = new QGroupBox(tr("Phi Lambda Phi Sign-in"));
         QLabel formLabel = new QLabel(tr("Organization: "));
         formComboBox = new QComboBox();
+        
         for(int i=0; i < orgCount; i++)
         {
         	formComboBox.addItem(tr(orgIndex[i]));
@@ -84,10 +92,10 @@ public class SoberForm extends QWidget
         QGridLayout formLayout = new QGridLayout();
         formLayout.addWidget(formLabel, 0, 0);
         formLayout.addWidget(formComboBox, 0, 1);
-        formLayout.addWidget(soberCheckBox, 4, 0);
         formLayout.addWidget(orgLabelName, 2, 0);
-        formLayout.addWidget(submit, 5, 2);
         formLayout.addWidget(formLineEdit, 3, 0, 1, 3);
+        formLayout.addWidget(soberCheckBox, 4, 0);
+        formLayout.addWidget(submit, 5, 2);
         orgGroup.setLayout(formLayout);
         
         QGridLayout outLayout = new QGridLayout();
@@ -96,6 +104,7 @@ public class SoberForm extends QWidget
         orgOutput.setReadOnly(true);
         
         QGridLayout resetLayout = new QGridLayout();
+        resetButton.setMaximumWidth(100);
         resetLayout.addWidget(resetButton, 0, 0, 1, 2);
         resetGroup.setLayout(resetLayout);
         
@@ -114,9 +123,65 @@ public class SoberForm extends QWidget
 
         submit.clicked.connect(this, "submit()");
         resetButton.clicked.connect(this, "reset()");
-        
+
         setWindowTitle(tr(windowTitle));
         setWindowIcon(new QIcon(fileDir+"images/soberShift.png"));
+        
+        
+//        Below this will setup the first run window
+//        This should only happen if firstRun variable is true
+        if(firstRun)
+        {
+	        QTextEdit introText;
+	        
+	        QGroupBox firstRun = new QGroupBox(tr("Your first time with SoberShift"));
+	        introText = new QTextEdit();
+	        introText.setReadOnly(true);
+	        introText.setText("This appears to be your first time running my program! "
+	        		+ "I'm glad you've decided to test out SoberShift " + SoberForm.version
+	        		+ " and I hope you'll enjoy it very much!");
+	        introText.append("");
+	        introText.append("The goal of this program is to make taking attendance at "
+	        		+ "any IFC party a little easier and give fraternities a better way "
+	        		+ "to collect data about who's going to their parties and when.");
+	        introText.append("");
+	        introText.append("To see the files that are created with SoberShift you can "
+	        		+ "check the file that should be created on your desktop folder after "
+	        		+ "you close this prompt. ");
+	        introText.append("");
+	        introText.append("To populate the list of organizations that you want to add "
+	        		+ "to the combo wheel all you have to do is open SoberShift -> bin -> "
+	        		+ "organizations.txt and fill that with whichever orgs you would like to "
+	        		+ "allow at your party. By default the file should contain both N/A (Non-Affiliated) "
+	        		+ "and UnK (membership unknown), but you can add more if you wish!");
+	        introText.append("");
+	        introText.append("I hope you enjoy SoberShift " + SoberForm.version + "!");
+	        introText.append("");
+	        introText.append("   - Blaine Harper");
+	        QPushButton okay = new QPushButton(tr("Okay"));
+	        okay.clicked.connect(this, "closeFirstRun()");
+	
+	        QGridLayout runLayout = new QGridLayout();
+	        runLayout.addWidget(introText, 0, 0);
+	        firstRun.setLayout(runLayout);
+	
+	        QGridLayout firstRunLayout = new QGridLayout();
+	        firstRunLayout.addWidget(firstRun, 0, 0);
+	        firstRunLayout.addWidget(okay, 1, 0);
+	
+	        FirstRun.firstRunWindow.setFixedWidth(640);
+	        FirstRun.firstRunWindow.setFixedHeight(320);
+	        
+	        FirstRun.firstRunWindow.setLayout(firstRunLayout);
+	        
+	        FirstRun.firstRunWindow.setWindowTitle(tr("Your first time using SoberShift?"));
+	        FirstRun.firstRunWindow.setWindowIcon(new QIcon(fileDir+"images/soberShift.png"));
+        }
+    }
+    
+    public void closeFirstRun()
+    {
+        FirstRun.firstRunWindow.close();
     }
     
     public void submit()
