@@ -10,26 +10,45 @@ import java.io.PrintWriter;
 
 import com.trolltech.qt.gui.*;
 
-public class SoberForm extends QWidget {
-
-    private QLineEdit orgLineEdit, orgOutput;
+public class SoberForm extends QWidget 
+{
+	public static final String version = "a1.0.2";
+	public static final String windowTitle = "Blaine Harper's SoberShift (" + version +")";	
+	public static boolean firstRun = false;
+	
+    private QLineEdit formLineEdit, orgOutput;
+    
+    private QComboBox formComboBox;
+    private QCheckBox soberCheckBox;
+    private static QTextEdit attendanceBox;
+    
     private static String userName = System.getProperty("user.name");
     private static String rootDir = "C:\\Users\\" + userName + "\\Desktop\\";
-    private static String fileDir = rootDir + "SoberShift\\";
-    private QComboBox orgComboBox;
+    static String fileDir = rootDir + "SoberShift\\";
+    
     private static String orgIndex[] = new String[64];
     private static int orgCount = 0;
-    private QCheckBox soberCheckBox;
-
+    
+//    Some strings for filepaths to make this easier
+    public static String namesFile = fileDir + "names.txt",
+    					attendanceFile = fileDir + "\\bin\\attendance.ssf",
+    					orgsFile = fileDir + "\\bin\\organizations.txt",
+    					fullLogsFile = fileDir + "fullLogs.txt";
+    
     public static void main(String args[]) 
     {
     	setUpDirectory();
-    	
+        
+        if(firstRun)
+        	FirstRun.run();
+        
         setupIndexArray();
+        
         QApplication.initialize(args);
 
-        SoberForm lineedits = new SoberForm();
-        lineedits.show();
+        SoberForm soberForm = new SoberForm();
+        soberForm.show();
+        populateAttendance();
 
         QApplication.instance().exec();
     }
@@ -42,51 +61,92 @@ public class SoberForm extends QWidget {
         super(parent);
         
         QGroupBox orgGroup = new QGroupBox(tr("Phi Lambda Phi Sign-in"));
-        QLabel orgLabel = new QLabel(tr("Organization: "));
-        orgComboBox = new QComboBox();
+        QLabel formLabel = new QLabel(tr("Organization: "));
+        formComboBox = new QComboBox();
         for(int i=0; i < orgCount; i++)
         {
-        	orgComboBox.addItem(tr(orgIndex[i]));
+        	formComboBox.addItem(tr(orgIndex[i]));
         }
         soberCheckBox = new QCheckBox(tr("Sober?"));
         QLabel orgLabelName = new QLabel(tr("Name: "));
         QPushButton submit = new QPushButton(tr("Submit")); 
-        orgLineEdit = new QLineEdit();
+        formLineEdit = new QLineEdit();
         
         QGroupBox outGroup = new QGroupBox(tr("Output:"));
         orgOutput = new QLineEdit();
+
+        QGroupBox resetGroup = new QGroupBox(tr("Reset:"));
+        QPushButton resetButton = new QPushButton(tr("Reset"));
+
+        QGroupBox attendeeGroup = new QGroupBox(tr("Attendance:"));
+        attendanceBox = new QTextEdit();
         
-        QGridLayout orgLayout = new QGridLayout();
-        orgLayout.addWidget(orgLabel, 0, 0);
-        orgLayout.addWidget(orgComboBox, 0, 1);
-        orgLayout.addWidget(soberCheckBox, 4, 0);
-        orgLayout.addWidget(orgLabelName, 2, 0);
-        orgLayout.addWidget(submit, 5, 1);
-        orgLayout.addWidget(orgLineEdit, 3, 0, 1, 2);
-        orgGroup.setLayout(orgLayout);
+        QGridLayout formLayout = new QGridLayout();
+        formLayout.addWidget(formLabel, 0, 0);
+        formLayout.addWidget(formComboBox, 0, 1);
+        formLayout.addWidget(soberCheckBox, 4, 0);
+        formLayout.addWidget(orgLabelName, 2, 0);
+        formLayout.addWidget(submit, 5, 2);
+        formLayout.addWidget(formLineEdit, 3, 0, 1, 3);
+        orgGroup.setLayout(formLayout);
         
         QGridLayout outLayout = new QGridLayout();
-        outLayout.addWidget(orgOutput, 6, 0, 1, 2);
+        outLayout.addWidget(orgOutput, 0, 0, 1, 2);
         outGroup.setLayout(outLayout);
         orgOutput.setReadOnly(true);
+        
+        QGridLayout resetLayout = new QGridLayout();
+        resetLayout.addWidget(resetButton, 0, 0, 1, 2);
+        resetGroup.setLayout(resetLayout);
+        
+        QGridLayout attendeeLayout = new QGridLayout();
+        attendeeGroup.setLayout(attendeeLayout);
+        attendeeLayout.addWidget(attendanceBox, 0, 0);
+        attendanceBox.setReadOnly(true);
 
         QGridLayout layout = new QGridLayout();
         layout.addWidget(orgGroup, 0, 0);
-        layout.addWidget(outGroup, 6, 0);
+        layout.addWidget(outGroup, 1, 0);
+        layout.addWidget(attendeeGroup, 0, 1);
+        layout.addWidget(resetGroup, 1, 1);
         
         setLayout(layout);
-        
+
         submit.clicked.connect(this, "submit()");
+        resetButton.clicked.connect(this, "reset()");
         
-        setWindowTitle(tr("PLP Sober Form"));
-        setWindowIcon(new QIcon("images/soberShift.png"));
+        setWindowTitle(tr(windowTitle));
+        setWindowIcon(new QIcon(fileDir+"images/soberShift.png"));
     }
     
     public void submit()
     {
     	writeFile();
-    	orgLineEdit.setText("");
+    	formLineEdit.setText("");
     	soberCheckBox.setChecked(false);
+    }
+    
+    public void reset()
+    {
+		try {
+			PrintWriter writer = new PrintWriter(fullLogsFile, "UTF-8");
+			writer.println("");
+			writer.close();
+			
+			writer = new PrintWriter(namesFile, "UTF-8");
+			writer.println("");
+			writer.close();
+			
+			writer = new PrintWriter(attendanceFile, "UTF-8");
+			writer.println("");
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		attendanceBox.setText("");
+		formLineEdit.setText("");
+		orgOutput.setText("All files reset to default!");
     }
     
     public static void setupIndexArray()
@@ -96,14 +156,13 @@ public class SoberForm extends QWidget {
 		
 		try {
 			//br = new BufferedReader(new FileReader(FILENAME));
-			fr = new FileReader(fileDir + "Organizations.txt");
+			fr = new FileReader(orgsFile);
 			br = new BufferedReader(fr);
 			String sCurrentLine;
 			int i=0;
 			
 			while ((sCurrentLine = br.readLine()) != null) 
 			{
-				System.out.println(sCurrentLine + i);
 				orgIndex[i]=sCurrentLine;	
 				i++;
 			}
@@ -115,24 +174,14 @@ public class SoberForm extends QWidget {
 			e.printStackTrace();
 
 		}
-		/*
-    	orgIndex[0] = "PLP";
-    	orgIndex[1] = "ASA";
-    	orgIndex[2] = "DX";
-    	orgIndex[3] = "N/A";
-    	orgIndex[4] = "Unknown";
-    	*/
     }
     
     public void writeFile()
-    {
-    	String fileName = fileDir + "FullLogs.txt";
-    	String fileNameShort = fileDir + "Names.txt";
-		
+    {		
     	try
     	{
             //Specify the file name and path here
-        	File file = new File(fileName);
+        	File file = new File(fullLogsFile);
 
         	/* This logic is to create the file if the
         	 * file is not already present
@@ -153,18 +202,20 @@ public class SoberForm extends QWidget {
         	 * mentioned Strings to the file in new lines.
         	 */
         	
+        	String fullLogsText = "[" + Clock.getTime() + "] | " + orgIndex[formComboBox.currentIndex()] + " | " + formLineEdit.text();
+        	
         	if(soberCheckBox.isChecked())
     		{
-        		pw.print(orgIndex[orgComboBox.currentIndex()] + " | " + orgLineEdit.text() + " (Sober)");
+        		pw.print(fullLogsText + " (Sober)");
     		} else {
-    			pw.print(orgIndex[orgComboBox.currentIndex()] + " | " + orgLineEdit.text());
+    			pw.print(fullLogsText);
     		}
         	
     		if(soberCheckBox.isChecked())
     		{
-        		orgOutput.setText(orgIndex[orgComboBox.currentIndex()] + " | " + orgLineEdit.text() + " (Sober)");
+        		orgOutput.setText(orgIndex[formComboBox.currentIndex()] + " | " + formLineEdit.text() + " (Sober)");
     		} else {
-        		orgOutput.setText(orgIndex[orgComboBox.currentIndex()] + " | " + orgLineEdit.text());
+        		orgOutput.setText(orgIndex[formComboBox.currentIndex()] + " | " + formLineEdit.text());
     		}
     		
         	pw.close();
@@ -176,7 +227,7 @@ public class SoberForm extends QWidget {
     	try
     	{
             //Specify the file name and path here
-        	File file = new File(fileNameShort);
+        	File file = new File(namesFile);
 
         	/* This logic is to create the file if the
         	 * file is not already present
@@ -198,9 +249,33 @@ public class SoberForm extends QWidget {
         	 */
         	if(soberCheckBox.isChecked())
     		{
-        		pw.print(orgLineEdit.text() + " (Sober)");
+        		pw.print(formLineEdit.text() + " (Sober)");
     		} else {
-    			pw.print(orgLineEdit.text());
+    			pw.print(formLineEdit.text());
+    		}
+        	
+        	pw.close();
+
+//        	This will wrtie everything for the attendance box 
+//        	and work on refreshing the box everytime content
+//        	is submitted
+        	
+        	file = new File(attendanceFile);
+        	if(!file.exists())
+        	{
+				file.createNewFile();
+        	}
+        	fw = new FileWriter(file,true);
+        	bw = new BufferedWriter(fw);
+        	pw = new PrintWriter(bw);
+        	pw.println("");
+        	if(soberCheckBox.isChecked())
+    		{
+        		attendanceBox.append("[" + Clock.getTime() + "] " + formLineEdit.text() + " (Sober)");
+        		pw.print("[" + Clock.getTime() + "] " + formLineEdit.text() + " (Sober)");
+    		} else {
+    			attendanceBox.append("[" + Clock.getTime() + "] " + formLineEdit.text());
+    			pw.print("[" + Clock.getTime() + "] " + formLineEdit.text());
     		}
         	
         	pw.close();
@@ -209,9 +284,9 @@ public class SoberForm extends QWidget {
 		}
     }
     
-    public static void setUpDirectory()
+    public static void makeNewDir(String dir)
     {
-    	File theDir = new File(rootDir + "SoberShift");
+    	File theDir = new File(dir);
 
     	// if the directory does not exist, create it
     	if (!theDir.exists()) {
@@ -229,10 +304,11 @@ public class SoberForm extends QWidget {
     	        System.out.println("DIR created");  
     	    }
     	}
-    	
-//    	This will check for the org file and make a new one if there isn't one
-    	
-    	File file = new File(fileDir + "Organizations.txt");
+    }
+    
+    public static void makeNewFile(String filePath, String defaultText)
+    {
+    	File file = new File(filePath);
 		
 		if(!file.exists())
     	{
@@ -244,7 +320,7 @@ public class SoberForm extends QWidget {
 	        	BufferedWriter bw = new BufferedWriter(fw);
 	        	PrintWriter pw = new PrintWriter(bw);
 	        	//This will add a new line to the file content
-	        	pw.println("N/A");
+	        	pw.println(defaultText);
 	        	/* Below three statements would add three 
 	        	 * mentioned Strings to the file in new lines.
 	        	 */
@@ -253,5 +329,44 @@ public class SoberForm extends QWidget {
 				e.printStackTrace();
 			}
     	}
+    }
+    
+    public static void setUpDirectory()
+    {
+    	File file = new File(rootDir + "SoberShift");
+    	if(!file.exists())
+    		firstRun = true;
+    	if(firstRun)
+    		System.out.println("First RUN!");
+    	makeNewDir(rootDir + "SoberShift");
+    	makeNewDir(fileDir + "images");
+    	makeNewDir(fileDir + "bin");
+    	makeNewFile(orgsFile,"N/A");
+    	makeNewFile(attendanceFile, "");
+    }
+    
+    public static void populateAttendance()
+    {
+    	BufferedReader br = null;
+		FileReader fr = null;
+		
+		try {
+			//br = new BufferedReader(new FileReader(FILENAME));
+			fr = new FileReader(attendanceFile);
+			br = new BufferedReader(fr);
+			
+			String sCurrentLine;
+			
+			while ((sCurrentLine = br.readLine()) != null) 
+			{
+				attendanceBox.append(sCurrentLine);	
+			}
+			br.close();
+
+		} catch (IOException e) {
+
+			e.printStackTrace();
+
+		}
     }
 }
