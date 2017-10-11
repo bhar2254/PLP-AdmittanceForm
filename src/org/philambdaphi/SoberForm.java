@@ -14,7 +14,7 @@ import com.trolltech.qt.gui.*;
 
 public class SoberForm extends QWidget 
 {
-	public static final String version = "a1.1.0";
+	public static final String version = "a1.1.1";
 	public static final String organization = "Truman State IFC";
 	public static final String windowTitle = "Blaine Harper's SoberShift (" + version +")";	
 	public static boolean firstRun = false, closeFirstRun = false;
@@ -26,6 +26,10 @@ public class SoberForm extends QWidget
     private QComboBox formComboBox;
     private QCheckBox soberCheckBox;
     private static QTextEdit attendanceBox;
+    QRadioButton genderMale;
+    QRadioButton genderFemale;
+    QRadioButton genderOther;
+    private static String genderSelected = "N/A";
     
     private static String userName = System.getProperty("user.name");
     private static String rootDir = "C:\\Users\\" + userName + "\\Desktop\\";
@@ -39,7 +43,10 @@ public class SoberForm extends QWidget
 //    Some strings for filepaths to make this easier
     public static String namesFile = fileDir + "names.txt",
     					attendanceFile = fileDir + "\\bin\\" + Clock.getDate() + ".ssf",
-    					orgsFile = fileDir + "\\bin\\organizations.txt",
+    	    			orgsFratFile = fileDir + "\\bin\\fraternities.txt",
+    	    	    	orgsSorFile = fileDir + "\\bin\\sororities.txt",
+    	    	    	orgsUnaffFile = fileDir + "\\bin\\basic.txt",
+    	    	    	orgsFile = fileDir + "\\bin\\organizations.txt",
     					fullLogsFile = fileDir + "fullLogs.txt";
     
     public static void main(String args[]) 
@@ -49,7 +56,7 @@ public class SoberForm extends QWidget
     	screenWidth = (int) screenSize.getWidth();
     	screenHeight = (int) screenSize.getHeight();
     	
-        setupIndexArray();
+        setupIndexArray(orgsUnaffFile);
         
         QApplication.initialize(args);
 
@@ -77,12 +84,18 @@ public class SoberForm extends QWidget
         
         QGroupBox orgGroup = new QGroupBox(tr(organization + " Sign-in"));
         QLabel formLabel = new QLabel(tr("Organization: "));
+        QRadioButton genderMale = new QRadioButton(tr("Male"));
+        QRadioButton genderFemale = new QRadioButton(tr("Female"));
+        QRadioButton genderOther = new QRadioButton(tr("N/A"));
+        genderOther.setChecked(true);
+        
         formComboBox = new QComboBox();
         
         for(int i=0; i < orgCount; i++)
         {
         	formComboBox.addItem(tr(orgIndex[i]));
         }
+        
         soberCheckBox = new QCheckBox(tr("Sober?"));
         QLabel orgLabelName = new QLabel(tr("Name: "));
         QPushButton submit = new QPushButton(tr("Submit")); 
@@ -99,11 +112,14 @@ public class SoberForm extends QWidget
         attendanceBox = new QTextEdit();
         
         QGridLayout formLayout = new QGridLayout();
-        formLayout.addWidget(formLabel, 0, 0);
-        formLayout.addWidget(formComboBox, 0, 1);
-        formLayout.addWidget(orgLabelName, 2, 0);
-        formLayout.addWidget(formLineEdit, 3, 0, 1, 3);
-        formLayout.addWidget(soberCheckBox, 4, 0);
+        formLayout.addWidget(genderMale, 1, 0);
+        formLayout.addWidget(genderFemale, 1, 1);
+        formLayout.addWidget(genderOther, 1, 2);
+        formLayout.addWidget(formLabel, 2, 0);
+        formLayout.addWidget(formComboBox, 2, 1);
+        formLayout.addWidget(orgLabelName, 3, 0);
+        formLayout.addWidget(formLineEdit, 3, 1, 1, 3);
+        formLayout.addWidget(soberCheckBox, 5, 0);
         formLayout.addWidget(submit, 5, 2);
         orgGroup.setLayout(formLayout);
         
@@ -136,12 +152,16 @@ public class SoberForm extends QWidget
         resetButton.clicked.connect(this, "reset()");
         quitButton.clicked.connect(this, "quit()");
         
+        genderMale.clicked.connect(this, "fraternites()");
+        genderFemale.clicked.connect(this, "sororities()");
+        genderOther.clicked.connect(this, "unaffiliated()");
+        
         setWindowTitle(tr(windowTitle));
         setWindowIcon(new QIcon(fileDir+"images/soberShift.png"));
         
-        
 //        Below this will setup the first run window
 //        This should only happen if firstRun variable is true
+        
         if(firstRun)
         {
 	        QTextEdit introText;
@@ -199,6 +219,43 @@ public class SoberForm extends QWidget
     public void closeFirstRun()
     {
         FirstRun.firstRunWindow.close();
+    }
+    
+    public void fraternites()
+    {
+    	genderSelected = "M";
+    	updateComboBox(orgsFratFile);
+    }
+    
+    public void sororities()
+    {
+    	genderSelected = "F";
+    	updateComboBox(orgsSorFile);
+    }
+    
+    public void unaffiliated()
+    {
+    	genderSelected = "N";
+    	updateComboBox(orgsUnaffFile);
+    }
+    
+    public void allOrgs()
+    {
+    	genderSelected = "N";
+    	updateComboBox(orgsFile);
+    }
+    
+    public void updateComboBox(String file)
+    {
+    	formComboBox.clear();
+    	
+    	setupIndexArray(file);
+    	
+    	for(int i=0; i < orgCount; i++)
+        {
+        	formComboBox.addItem(tr(orgIndex[i]));
+        }
+    	
     }
     
     public void submit()
@@ -271,14 +328,14 @@ public class SoberForm extends QWidget
     	}
     }
     
-    public static void setupIndexArray()
+    public static void setupIndexArray(String file)
     {
     	BufferedReader br = null;
 		FileReader fr = null;
 		
 		try {
 			//br = new BufferedReader(new FileReader(FILENAME));
-			fr = new FileReader(orgsFile);
+			fr = new FileReader(file);
 			br = new BufferedReader(fr);
 			String sCurrentLine;
 			int i=0;
@@ -324,7 +381,7 @@ public class SoberForm extends QWidget
         	 * mentioned Strings to the file in new lines.
         	 */
         	
-        	String fullLogsText = "[" + Clock.getTime() + "] | " + orgIndex[formComboBox.currentIndex()] + " | " + formLineEdit.text();
+        	String fullLogsText = "[" + Clock.getTime() + "] | " + genderSelected + " | " + orgIndex[formComboBox.currentIndex()] + " | " + formLineEdit.text();
         	
         	if(soberCheckBox.isChecked())
     		{
@@ -391,13 +448,17 @@ public class SoberForm extends QWidget
         	bw = new BufferedWriter(fw);
         	pw = new PrintWriter(bw);
         	pw.println("");
+        	
+        	String text = "[" + Clock.getTime() + "]  " + genderSelected + " | " + formLineEdit.text();
+        	
+        	
         	if(soberCheckBox.isChecked())
     		{
-        		attendanceBox.append("[" + Clock.getTime() + "] " + formLineEdit.text() + " (Sober)");
-        		pw.print("[" + Clock.getTime() + "] " + formLineEdit.text() + " (Sober)");
+        		attendanceBox.append(text + " (Sober)");
+            	pw.print(text + " (Sober)");
     		} else {
-    			attendanceBox.append("[" + Clock.getTime() + "] " + formLineEdit.text());
-    			pw.print("[" + Clock.getTime() + "] " + formLineEdit.text());
+    			attendanceBox.append(text);
+    			pw.print(text);
     		}
         	
         	pw.close();
@@ -466,6 +527,12 @@ public class SoberForm extends QWidget
     	makeNewDir(fileDir + "images");
     	makeNewDir(fileDir + "bin");
     	makeNewFile(orgsFile,"N/A\n"
+    			+ "UnK");
+    	makeNewFile(orgsUnaffFile,"N/A\n"
+    			+ "UnK");
+    	makeNewFile(orgsFratFile,"N/A\n"
+    			+ "UnK");
+    	makeNewFile(orgsSorFile,"N/A\n"
     			+ "UnK");
     	makeNewFile(attendanceFile, "");
     }
