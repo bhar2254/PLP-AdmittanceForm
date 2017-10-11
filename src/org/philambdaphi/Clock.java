@@ -10,4 +10,10 @@ public class Clock
 		String timeStamp = new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime());
 		return timeStamp;
 	}
+	
+	public static String getDate()
+	{
+		String timeStamp = new SimpleDateFormat("yy-MM-dd").format(Calendar.getInstance().getTime());
+		return timeStamp;
+	}
 }

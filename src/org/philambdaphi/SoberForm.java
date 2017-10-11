@@ -1,5 +1,7 @@
 package org.philambdaphi;
 
+import java.awt.Dimension;
+import java.awt.Toolkit;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -12,9 +14,12 @@ import com.trolltech.qt.gui.*;
 
 public class SoberForm extends QWidget 
 {
-	public static final String version = "a1.0.2";
+	public static final String version = "a1.1.0";
+	public static final String organization = "Truman State IFC";
 	public static final String windowTitle = "Blaine Harper's SoberShift (" + version +")";	
 	public static boolean firstRun = false, closeFirstRun = false;
+	
+	public static int screenWidth,screenHeight;
 	
     private QLineEdit formLineEdit, orgOutput;
     
@@ -33,14 +38,17 @@ public class SoberForm extends QWidget
     
 //    Some strings for filepaths to make this easier
     public static String namesFile = fileDir + "names.txt",
-    					attendanceFile = fileDir + "\\bin\\attendance.ssf",
+    					attendanceFile = fileDir + "\\bin\\" + Clock.getDate() + ".ssf",
     					orgsFile = fileDir + "\\bin\\organizations.txt",
     					fullLogsFile = fileDir + "fullLogs.txt";
     
     public static void main(String args[]) 
     {
     	setUpDirectory();
-        
+    	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+    	screenWidth = (int) screenSize.getWidth();
+    	screenHeight = (int) screenSize.getHeight();
+    	
         setupIndexArray();
         
         QApplication.initialize(args);
@@ -50,7 +58,7 @@ public class SoberForm extends QWidget
         
         soberForm = new SoberForm();
         soberForm.show();
-        soberForm.setFixedSize(480, 240);
+        soberForm.setFixedSize((int) (screenWidth / 2.5), screenHeight / 3);
         
         if(firstRun)
         	FirstRun.firstRunWindow.raise();
@@ -67,7 +75,7 @@ public class SoberForm extends QWidget
     public SoberForm(QWidget parent) {
         super(parent);
         
-        QGroupBox orgGroup = new QGroupBox(tr("Phi Lambda Phi Sign-in"));
+        QGroupBox orgGroup = new QGroupBox(tr(organization + " Sign-in"));
         QLabel formLabel = new QLabel(tr("Organization: "));
         formComboBox = new QComboBox();
         
@@ -83,8 +91,9 @@ public class SoberForm extends QWidget
         QGroupBox outGroup = new QGroupBox(tr("Output:"));
         orgOutput = new QLineEdit();
 
-        QGroupBox resetGroup = new QGroupBox(tr("Reset:"));
+        QGroupBox resetGroup = new QGroupBox(tr("File:"));
         QPushButton resetButton = new QPushButton(tr("Reset"));
+        QPushButton quitButton = new QPushButton(tr("Quit"));
 
         QGroupBox attendeeGroup = new QGroupBox(tr("Attendance:"));
         attendanceBox = new QTextEdit();
@@ -104,8 +113,10 @@ public class SoberForm extends QWidget
         orgOutput.setReadOnly(true);
         
         QGridLayout resetLayout = new QGridLayout();
-        resetButton.setMaximumWidth(100);
+        resetButton.setMaximumWidth(150);
+        quitButton.setMaximumWidth(150);
         resetLayout.addWidget(resetButton, 0, 0, 1, 2);
+        resetLayout.addWidget(quitButton, 0, 1, 1, 2);
         resetGroup.setLayout(resetLayout);
         
         QGridLayout attendeeLayout = new QGridLayout();
@@ -123,7 +134,8 @@ public class SoberForm extends QWidget
 
         submit.clicked.connect(this, "submit()");
         resetButton.clicked.connect(this, "reset()");
-
+        quitButton.clicked.connect(this, "quit()");
+        
         setWindowTitle(tr(windowTitle));
         setWindowIcon(new QIcon(fileDir+"images/soberShift.png"));
         
@@ -160,7 +172,7 @@ public class SoberForm extends QWidget
 	        introText.append("   - Blaine Harper");
 	        QPushButton okay = new QPushButton(tr("Okay"));
 	        okay.clicked.connect(this, "closeFirstRun()");
-	
+	        
 	        QGridLayout runLayout = new QGridLayout();
 	        runLayout.addWidget(introText, 0, 0);
 	        firstRun.setLayout(runLayout);
@@ -176,6 +188,11 @@ public class SoberForm extends QWidget
 	        
 	        FirstRun.firstRunWindow.setWindowTitle(tr("Your first time using SoberShift?"));
 	        FirstRun.firstRunWindow.setWindowIcon(new QIcon(fileDir+"images/soberShift.png"));
+	        
+	        if(soberCheckBox.isChecked())
+	        	orgOutput.setText("Checked!");
+	        else
+	        	orgOutput.setText("Not checked!");
         }
     }
     
@@ -186,32 +203,72 @@ public class SoberForm extends QWidget
     
     public void submit()
     {
-    	writeFile();
-    	formLineEdit.setText("");
-    	soberCheckBox.setChecked(false);
+    	if(!formLineEdit.text().isEmpty())
+    	{
+    		writeFile();
+    		formLineEdit.setText("");
+    		soberCheckBox.setChecked(false);
+    	} else {
+        	orgOutput.setText("Name line should not be blank!");
+    	}
+    }
+    
+    public boolean messageBox(QMessageBox.Icon icon, String title, String text)
+    {
+    	boolean bool = true;
+    	QMessageBox.StandardButtons buttons = new QMessageBox.StandardButtons();
+    	buttons.set(QMessageBox.StandardButton.Yes);
+    	buttons.set(QMessageBox.StandardButton.No);
+
+		QMessageBox msgBox = new QMessageBox();
+		msgBox.setStandardButtons(buttons);
+		msgBox.setWindowTitle(title);
+		msgBox.setText(text);
+		msgBox.setWindowIcon(new QIcon(fileDir+"images/soberShift.png"));
+		msgBox.setIcon(icon);
+		
+		int ret = msgBox.exec();
+		
+		if(ret==16384)
+			bool=true;
+		else
+			bool=false;
+    	return bool;
+    }
+    
+	@SuppressWarnings("static-access")
+	public void quit()
+    {
+    	if(messageBox(QMessageBox.Icon.Critical, "Quit", "Are you sure you would like to quit?"))
+    		QApplication.instance().quit();
     }
     
     public void reset()
     {
-		try {
-			PrintWriter writer = new PrintWriter(fullLogsFile, "UTF-8");
-			writer.println("");
-			writer.close();
-			
-			writer = new PrintWriter(namesFile, "UTF-8");
-			writer.println("");
-			writer.close();
-			
-			writer = new PrintWriter(attendanceFile, "UTF-8");
-			writer.println("");
-			writer.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+    	if(messageBox(QMessageBox.Icon.Warning, "Reset Files", "You are about to "
+    			+ "reset all your attendance files for today.\n\n "
+    			+ "Are you sure you would like to continue?"))
+    	{
+            try {
+    			PrintWriter writer = new PrintWriter(fullLogsFile, "UTF-8");
+    			writer.println("");
+    			writer.close();
+    			
+    			writer = new PrintWriter(namesFile, "UTF-8");
+    			writer.println("");
+    			writer.close();
+    			
+    			writer = new PrintWriter(attendanceFile, "UTF-8");
+    			writer.println("");
+    			writer.close();
+    		} catch (IOException e) {
+    			e.printStackTrace();
+    		}
 
-		attendanceBox.setText("");
-		formLineEdit.setText("");
-		orgOutput.setText("All files reset to default!");
+    		attendanceBox.setText("");
+    		formLineEdit.setText("");
+    		orgOutput.setText("All files reset to default!");
+    	}
     }
     
     public static void setupIndexArray()
