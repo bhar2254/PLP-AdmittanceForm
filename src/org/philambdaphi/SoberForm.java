@@ -24,7 +24,8 @@ public class SoberForm extends QWidget
     private QLineEdit formLineEdit, orgOutput;
     
     private QComboBox formComboBox;
-    private QCheckBox soberCheckBox;
+    private QRadioButton inRadioButton, outRadioButton;
+    private QCheckBox soberCheckBox, minorCheckBox;
     private static QTextEdit attendanceBox;
     
     private static String userName = System.getProperty("user.name");
@@ -83,7 +84,10 @@ public class SoberForm extends QWidget
         {
         	formComboBox.addItem(tr(orgIndex[i]));
         }
-        soberCheckBox = new QCheckBox(tr("Sober?"));
+        soberCheckBox = new QCheckBox(tr("Sober"));
+        minorCheckBox = new QCheckBox(tr("Minor"));
+        inRadioButton = new QRadioButton(tr("In"));
+        outRadioButton = new QRadioButton(tr("Out"));
         QLabel orgLabelName = new QLabel(tr("Name: "));
         QPushButton submit = new QPushButton(tr("Submit")); 
         formLineEdit = new QLineEdit();
@@ -103,8 +107,11 @@ public class SoberForm extends QWidget
         formLayout.addWidget(formComboBox, 0, 1);
         formLayout.addWidget(orgLabelName, 2, 0);
         formLayout.addWidget(formLineEdit, 3, 0, 1, 3);
-        formLayout.addWidget(soberCheckBox, 4, 0);
-        formLayout.addWidget(submit, 5, 2);
+        formLayout.addWidget(soberCheckBox, 4, 1);
+        formLayout.addWidget(minorCheckBox, 5, 1);
+        formLayout.addWidget(inRadioButton, 4, 0);
+        formLayout.addWidget(outRadioButton, 5, 0);
+        formLayout.addWidget(submit, 6, 2);
         orgGroup.setLayout(formLayout);
         
         QGridLayout outLayout = new QGridLayout();
@@ -132,6 +139,8 @@ public class SoberForm extends QWidget
         
         setLayout(layout);
 
+        inRadioButton.setChecked(true);
+        
         submit.clicked.connect(this, "submit()");
         resetButton.clicked.connect(this, "reset()");
         quitButton.clicked.connect(this, "quit()");
@@ -202,12 +211,15 @@ public class SoberForm extends QWidget
     }
     
     public void submit()
-    {
+    {	
+    	if(nameOnList(formLineEdit.text()))
+    		System.out.println("Already in");
     	if(!formLineEdit.text().isEmpty())
     	{
     		writeFile();
     		formLineEdit.setText("");
     		soberCheckBox.setChecked(false);
+    		minorCheckBox.setChecked(false);
     	} else {
         	orgOutput.setText("Name line should not be blank!");
     	}
@@ -271,6 +283,35 @@ public class SoberForm extends QWidget
     	}
     }
     
+    public static boolean nameOnList(String name)
+    {
+    	boolean inList = false;
+    	
+    	BufferedReader br = null;
+		FileReader fr = null;
+		
+		try {
+			//br = new BufferedReader(new FileReader(FILENAME));
+			fr = new FileReader(namesFile);
+			br = new BufferedReader(fr);
+			String sCurrentLine;
+			
+			while ((sCurrentLine = br.readLine()) != null) 
+			{
+				if(StringFunctions.similarity(name, sCurrentLine) >= .8)
+					inList = true;
+			}
+			br.close();
+
+		} catch (IOException e) {
+
+			e.printStackTrace();
+
+		}
+		
+    	return inList;
+    }
+    
     public static void setupIndexArray()
     {
     	BufferedReader br = null;
@@ -300,6 +341,18 @@ public class SoberForm extends QWidget
     
     public void writeFile()
     {		
+    	if(minorCheckBox.isChecked())
+    		soberCheckBox.setChecked(true);
+    	
+    	String in = "IN | ";
+    	String minor = "";
+    	
+    	if(!inRadioButton.isChecked())
+    		in = "OUT | ";
+    	
+    	if(minorCheckBox.isChecked())
+    		minor = " X";
+    	
     	try
     	{
             //Specify the file name and path here
@@ -324,7 +377,7 @@ public class SoberForm extends QWidget
         	 * mentioned Strings to the file in new lines.
         	 */
         	
-        	String fullLogsText = "[" + Clock.getTime() + "] | " + orgIndex[formComboBox.currentIndex()] + " | " + formLineEdit.text();
+        	String fullLogsText = "[" + in + Clock.getTime() + "] | " + orgIndex[formComboBox.currentIndex()] + " | " + formLineEdit.text();
         	
         	if(soberCheckBox.isChecked())
     		{
@@ -369,12 +422,7 @@ public class SoberForm extends QWidget
         	/* Below three statements would add three 
         	 * mentioned Strings to the file in new lines.
         	 */
-        	if(soberCheckBox.isChecked())
-    		{
-        		pw.print(formLineEdit.text() + " (Sober)");
-    		} else {
-    			pw.print(formLineEdit.text());
-    		}
+    		pw.print(formLineEdit.text());
         	
         	pw.close();
 
@@ -391,13 +439,14 @@ public class SoberForm extends QWidget
         	bw = new BufferedWriter(fw);
         	pw = new PrintWriter(bw);
         	pw.println("");
+        	
         	if(soberCheckBox.isChecked())
     		{
-        		attendanceBox.append("[" + Clock.getTime() + "] " + formLineEdit.text() + " (Sober)");
-        		pw.print("[" + Clock.getTime() + "] " + formLineEdit.text() + " (Sober)");
+        		attendanceBox.append("[" + in + Clock.getTime() + "] " + formLineEdit.text() + " (Sober)" + minor);
+        		pw.print("[" + in + Clock.getTime() + "] " + formLineEdit.text() + " (Sober)" + minor);
     		} else {
-    			attendanceBox.append("[" + Clock.getTime() + "] " + formLineEdit.text());
-    			pw.print("[" + Clock.getTime() + "] " + formLineEdit.text());
+    			attendanceBox.append("[" + in + Clock.getTime() + "] " + formLineEdit.text() + minor);
+    			pw.print("[" + in + Clock.getTime() + "] " + formLineEdit.text() + minor);
     		}
         	
         	pw.close();
